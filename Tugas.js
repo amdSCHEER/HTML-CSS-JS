@@ -5,7 +5,8 @@ if (mainContent) {
 	const formStyles = document.createElement("style");
 	formStyles.textContent = `
 		body { background: #f1f4ef; color: #26332d; }
-	.page { max-width: 900px; padding-top: 42px; }
+	.page { max-wid
+	th: 900px; padding-top: 42px; }
 	.content { margin-top: 0; }
 	#formulir-pilihan {
 		max-width: 760px;
@@ -72,13 +73,20 @@ if (mainContent) {
 	.form-submit { margin-top: 2px; }
 	#formResult {
 		margin-top: 20px;
-		padding: 0 16px;
-		border-left: 3px solid #a04d32;
+		padding: 16px;
+		border: 1px solid #dce4dc;
+		border-left: 4px solid #315e49;
+		border-radius: 6px;
 		background: #f7f8f5;
 	}
 	#formResult:empty { display: none; }
-	#formResult h3 { padding-top: 14px; font-family: Georgia, serif; font-size: 21px; }
-	#formResult p { margin-bottom: 8px; }
+	#formResult h3 { margin-bottom: 14px; font-family: Georgia, serif; font-size: 21px; }
+	.result-details { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 8px 14px; margin: 0; }
+	.result-details dt { color: #435149; font-weight: 700; }
+	.result-details dd { margin: 0; overflow-wrap: anywhere; }
+	.result-options-title { margin: 18px 0 6px; font-size: 15px; }
+	.result-options { margin: 0; padding-left: 22px; }
+	.result-options li { padding: 2px 0; }
 	@media (max-width: 600px) {
 		.page { width: 94%; padding-top: 24px; }
 		#formulir-pilihan { padding: 20px; }
@@ -106,12 +114,14 @@ if (mainContent) {
 				</div>
 			</div>
 			<div class="form-field">
-				<label for="optionCount">Jumlah pilihan <span>(1-10)</span></label>
+				<label for="optionCount">Jumlah pilihan</label>
 				<div class="quantity-controls">
-					<input type="number" id="optionCount" min="1" max="10" step="1" value="3">
-					<button type="button" id="makeOptions" class="form-button form-button-light">Buat pilihan</button>
+					<input type="number" id="optionCount" min="1" step="1" value="3">
+					<button type="button" id="makeOptionInputs" class="form-button form-button-light">Buat kolom pilihan</button>
 				</div>
 			</div>
+			<div id="optionInputs" class="form-field"></div>
+			<button type="button" id="showOptions" class="form-button form-button-light">Tampilkan pilihan di dropdown</button>
 			<div class="choices-grid">
 				<div class="form-field">
 					<label for="dropdownChoice">Dropdown</label>
@@ -134,32 +144,58 @@ if (mainContent) {
 
 	const choiceForm = document.getElementById("choiceForm");
 	const optionCount = document.getElementById("optionCount");
+	const optionInputs = document.getElementById("optionInputs");
 	const dropdownChoice = document.getElementById("dropdownChoice");
 	const checkboxChoices = document.getElementById("checkboxChoices");
 	const radioChoices = document.getElementById("radioChoices");
 	const formResult = document.getElementById("formResult");
 
-	function makeOptions() {
+	function clearChoices() {
+		dropdownChoice.replaceChildren();
+		checkboxChoices.replaceChildren();
+		radioChoices.replaceChildren();
+		formResult.replaceChildren();
+	}
+
+	function makeOptionInputs() {
 		const count = Number(optionCount.value);
 
-		if (!Number.isInteger(count) || count < 1 || count > 10) {
-			alert("Jumlah pilihan harus berupa angka bulat dari 1 sampai 10.");
+		if (!Number.isSafeInteger(count) || count < 1) {
+			alert("Masukkan jumlah pilihan berupa bilangan bulat minimal 1.");
 			optionCount.focus();
 			return;
 		}
 
-		const checkboxOptions = [];
-		const radioOptions = [];
-		dropdownChoice.replaceChildren();
-		checkboxChoices.replaceChildren();
-		radioChoices.replaceChildren();
+		optionInputs.replaceChildren();
+		clearChoices();
 
 		for (let i = 1; i <= count; i++) {
-			checkboxOptions.push(`Pilihan ${i}`);
-			radioOptions.push(`Pilihan ${i}`);
+			const label = document.createElement("label");
+			const input = document.createElement("input");
+			label.htmlFor = `option-${i}`;
+			label.textContent = `Pilihan ke-${i}`;
+			input.type = "text";
+			input.id = `option-${i}`;
+			input.className = "option-name";
+			input.placeholder = `Masukkan pilihan ke-${i}`;
+			input.required = true;
+			optionInputs.append(label, input);
+		}
+	}
+
+	function showOptions() {
+		const inputs = Array.from(optionInputs.querySelectorAll(".option-name"));
+		const options = inputs.map((input) => input.value.trim());
+
+		if (options.length === 0 || options.some((option) => !option)) {
+			alert("Buat kolom pilihan dan isi semua nama pilihan terlebih dahulu.");
+			const firstEmptyInput = inputs.find((input) => !input.value.trim());
+			(firstEmptyInput || optionCount).focus();
+			return;
 		}
 
-		checkboxOptions.forEach((text, index) => {
+		clearChoices();
+		options.forEach((text, index) => {
 			const dropdownOption = document.createElement("option");
 			dropdownOption.value = text;
 			dropdownOption.textContent = text;
@@ -175,9 +211,7 @@ if (mainContent) {
 			checkboxLabel.className = "choice-option";
 			checkboxLabel.append(checkbox, document.createTextNode(text));
 			checkboxChoices.append(checkboxLabel);
-		});
 
-		radioOptions.forEach((text, index) => {
 			const radioLabel = document.createElement("label");
 			const radio = document.createElement("input");
 			radio.type = "radio";
@@ -190,11 +224,12 @@ if (mainContent) {
 			radioLabel.append(radio, document.createTextNode(text));
 			radioChoices.append(radioLabel);
 		});
-
-		formResult.replaceChildren();
 	}
 
-	document.getElementById("makeOptions").addEventListener("click", makeOptions);
+	document.getElementById("makeOptionInputs").addEventListener("click", makeOptionInputs);
+	document.getElementById("showOptions").addEventListener("click", showOptions);
+	optionCount.addEventListener("input", clearChoices);
+	optionInputs.addEventListener("input", clearChoices);
 
 	choiceForm.addEventListener("submit", (event) => {
 		event.preventDefault();
@@ -216,6 +251,12 @@ if (mainContent) {
 			return;
 		}
 
+		if (dropdownChoice.options.length === 0) {
+			alert("Isi nama pilihan, lalu tekan Tampilkan pilihan di dropdown.");
+			optionCount.focus();
+			return;
+		}
+
 		const checked = Array.from(
 			choiceForm.querySelectorAll('input[name="checkboxChoice"]:checked'),
 			(input) => input.value
@@ -227,25 +268,42 @@ if (mainContent) {
 			return;
 		}
 
-		const results = [
-			`Nama: ${name.value.trim()}`,
-			`Email: ${email.value.trim()}`,
-			`Dropdown: ${dropdownChoice.value}`,
-			`Checkbox: ${checked.length ? checked.join(", ") : "Tidak ada"}`,
-			`Radio button: ${selectedRadio.value}`
-		];
-
 		formResult.replaceChildren();
 		const heading = document.createElement("h3");
 		heading.textContent = "Hasil pilihan";
 		formResult.append(heading);
 
-		results.forEach((text) => {
-			const paragraph = document.createElement("p");
-			paragraph.textContent = text;
-			formResult.append(paragraph);
+		const details = document.createElement("dl");
+		details.className = "result-details";
+		const resultItems = [
+			["Nama", name.value.trim()],
+			["Email", email.value.trim()],
+			["Pilihan dropdown", dropdownChoice.value],
+			["Checkbox", checked.length ? checked.join(", ") : "Tidak ada"],
+			["Radio button", selectedRadio.value]
+		];
+
+		resultItems.forEach(([label, value]) => {
+			const term = document.createElement("dt");
+			const description = document.createElement("dd");
+			term.textContent = label;
+			description.textContent = value;
+			details.append(term, description);
 		});
+		formResult.append(details);
+
+		const optionsTitle = document.createElement("h4");
+		optionsTitle.className = "result-options-title";
+		optionsTitle.textContent = "Semua pilihan yang dimasukkan";
+		const optionsList = document.createElement("ol");
+		optionsList.className = "result-options";
+		Array.from(optionInputs.querySelectorAll(".option-name")).forEach((input) => {
+			const item = document.createElement("li");
+			item.textContent = input.value.trim();
+			optionsList.append(item);
+		});
+		formResult.append(optionsTitle, optionsList);
 	});
 
-	makeOptions();
+	makeOptionInputs();
 }
